@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/fcntl.h>
@@ -66,7 +67,7 @@ int directives_to_list()
 	} else {
 	  fprintf(stderr,"Configuration directives block contains too many entries (max = %d)\n",MAX_DIRECTIVES);
 	  exit(-1);
-	}	      
+	}
       }
       len=0;
       break;
@@ -118,7 +119,7 @@ int directive_set_value(char *directive_key,char *directive_value)
 	  free(directives[i].key); free(directives[i].value);
 	  directives[i].key=NULL; directives[i].value=NULL;
 	  directives[i]=directives[directive_count-1];
-	  directive_count--;	   
+	  directive_count--;
 	}
 	break;
       }
@@ -153,7 +154,7 @@ int eeprom_decode_data(unsigned char *datablock,int flags)
     regulatory_information[0]=0;
     configuration_directives_length=0;
     configuration_directives[0]=0;
-  
+
     sha3_Init256();
     sha3_Update(&datablock[0x7C0],(0x7F0-0x7C0));
     sha3_Finalize();
@@ -162,7 +163,7 @@ int eeprom_decode_data(unsigned char *datablock,int flags)
     if (i==16) {
       if (!silent_mode)
 	fprintf(stderr,"Radio parameter block checksum valid.\n");
-      
+
       uint8_t format_version=datablock[0x7EF];
       eeprom_radio_parameters.primary_country[0]=datablock[0x7ED];
       eeprom_radio_parameters.primary_country[1]=datablock[0x7EE];
@@ -173,20 +174,20 @@ int eeprom_decode_data(unsigned char *datablock,int flags)
 	(datablock[0x7E5]<<24)+(datablock[0x7E4]<<16);
       eeprom_radio_parameters.txpower=datablock[0x7E1];
       eeprom_radio_parameters.dutycycle=datablock[0x7E0];
-      
+
       if (format_version!=0x01) {
 	fprintf(stderr,"Radio parameter block data format version is 0x%02x, which I don't understand.\n",format_version);
 	problems++;
       }
-      
+
     }
     else {
       fprintf(stderr,
-	      "ERROR: Radio parameter block checksum is wrong:\n"	       
+	      "ERROR: Radio parameter block checksum is wrong:\n"
 	      "       Radio will ignore EEPROM data!\n");
       problems++;
     }
-    
+
     // Parse extended regulatory information (country list etc)
     sha3_Init256();
     sha3_Update(&datablock[0x0400],0x7B0-0x400);
@@ -206,12 +207,12 @@ int eeprom_decode_data(unsigned char *datablock,int flags)
       }
     } else {
       fprintf(stderr,
-	      "ERROR: Radio regulatory information text checksum is wrong:\n"	       
+	      "ERROR: Radio regulatory information text checksum is wrong:\n"
 	      "       LBARD will report only ISO code from radio parameter block.\n");
       problems++;
     }
   }
-  
+
   // Parse user extended information area
   sha3_Init256();
   sha3_Update(&datablock[0x000],0x3F0);
@@ -239,16 +240,16 @@ int eeprom_decode_data(unsigned char *datablock,int flags)
   if (problems)
     fprintf(stderr,"WARNING: Encountered problems decoding EEPROM data.\n"
 	    "         Some data may be incorrect or corrupt.\n");
-  
+
   return problems;
 }
 
 int eeprom_display_data(char *msg)
 {
   int i;
-  
+
   fprintf(stderr,"%s\n",msg);
-  
+
   fprintf(stderr,
 	  "                radio max TX power = %d dBm\n",
 	  (int)eeprom_radio_parameters.txpower);
@@ -279,8 +280,8 @@ int eeprom_display_data(char *msg)
       fprintf(stderr,"  > ");
   }
   fprintf(stderr,"\n");
-  
-  
+
+
   fprintf(stderr,
 	  "Stored regulatory information text is as follows:\n  > ");
   for(i=0;regulatory_information[i];i++) {
@@ -290,7 +291,7 @@ int eeprom_display_data(char *msg)
   }
   fprintf(stderr,"\n");
 
-  
+
   return 0;
 }
 
@@ -314,7 +315,7 @@ int eeprom_parse_line(char *line,unsigned char *datablock)
 	     &b[12],&b[13],&b[14],&b[15])==17) {
     for(int i=0;i<16;i++) datablock[address+i]=b[i];
   }
-  
+
   return 0;
 }
 
@@ -347,8 +348,8 @@ int eeprom_parse_output(int fd,unsigned char *datablock, int address)
   count=offset;
   // now=gettime_ms();
   // if (count>0) fprintf(stderr,"%d bytes at T+%lldms\n",count,now-start);
-    
-  
+
+
   for(int i=0;i<count;i++) {
     if (line_len) {
       if (buffer[i]!='\r')
@@ -385,7 +386,7 @@ int eeprom_parse_output(int fd,unsigned char *datablock, int address)
     }
   }
   if (line_len) eeprom_parse_line(line,datablock);
-  
+
   return 0;
 }
 
@@ -421,7 +422,7 @@ int read_eeprom_directives(int fd,unsigned char *readblock)
   }
   // Make sure we read hash
   if (address<0x400) {
-    read_eeprom_block(fd,readblock,0x3F0);    
+    read_eeprom_block(fd,readblock,0x3F0);
   }
   if (!silent_mode) fprintf(stderr,"\n"); fflush(stderr);
   return 0;
@@ -445,9 +446,9 @@ int write_entire_eeprom(int fd,unsigned char *datablock,unsigned char *readblock
   // Use <addr>!g!y<data>!w sequence to write each 16 bytes
   int problems=0,address;
   if (!silent_mode) fprintf(stderr,"Writing data to EEPROM\n"); fflush(stderr);
-  
+
   for(address=0;address<0x800;address+=0x10) {
-    
+
     // Only write if it has changed
     int changed=0;
     if (readblock) {
@@ -455,9 +456,9 @@ int write_entire_eeprom(int fd,unsigned char *datablock,unsigned char *readblock
 	if (datablock[address+j]!=readblock[address+j])
 	  { changed=1; break; }
     } else changed=1;
-    
+
     if (!changed) continue;
-    
+
     // Try several times to write
     int result=eeprom_write_page(fd,address,datablock);
     if (result) {
@@ -467,9 +468,9 @@ int write_entire_eeprom(int fd,unsigned char *datablock,unsigned char *readblock
 	if (!result) break;
       }
     }
-    
+
     problems+=result;
-        
+
     if (!silent_mode)
       fprintf(stderr,"\rWrote $%x - $%x",address,address+0x10-1); fflush(stderr);
   }
@@ -494,7 +495,7 @@ int eeprom_build_image(char *configuration_directives_normalised,
 	    result);
     return(-1);
   }
-  
+
   bytes_used=0x7B0-0x400;
   result=mz_compress2(&datablock[0x400],&bytes_used,
 		      (unsigned char *)regulatory_information,
@@ -522,22 +523,22 @@ int eeprom_build_image(char *configuration_directives_normalised,
   datablock[0x7E5]=(radio_parameters.frequency>>24)&0xff;
   datablock[0x7E1]=radio_parameters.txpower;
   datablock[0x7E0]=radio_parameters.dutycycle;
-  
+
   // Write hashes
   int i;
-  
+
   // Mesh Extender configuration directive block
   sha3_Init256();
   sha3_Update(&datablock[0],0x3F0);
   sha3_Finalize();
   for(i=0;i<16;i++) datablock[0x3F0+i]=ctx.s[i>>3][i&7];
-  
+
   // Regulatory info block
   sha3_Init256();
   sha3_Update(&datablock[0x400],0x7B0-0x400);
   sha3_Finalize();
   for(i=0;i<16;i++) datablock[0x7B0+i]=ctx.s[i>>3][i&7];
-  
+
   // Radio parameter block
   sha3_Init256();
   sha3_Update(&datablock[0x7C0],0x7F0-0x7C0);
@@ -573,7 +574,7 @@ int eeprom_program(int argc,char **argv)
   if ((argc!=12)&&((argc<3)||(argc>7))) {
     usage(); exit(-1);
   }
-  
+
   int parameters_set=0;
   int parameters_show=0;
   int directive_get=0;
@@ -583,7 +584,7 @@ int eeprom_program(int argc,char **argv)
   char *directive_key=NULL;
   char *directive_value=NULL;
   int dump=0;
-  
+
   if ((argc>3)&&(argc<8)) {
     if (!strcasecmp(argv[3],"dump")) {
       dump=1;
@@ -605,7 +606,7 @@ int eeprom_program(int argc,char **argv)
 	  directive_key=argv[5];
 	  directive_value="";
 	  directive_set=1;
-	}	
+	}
       } else if (!strcasecmp(argv[4],"set")) {
 	if (argc==7) {
 	  directive_key=argv[5];
@@ -619,7 +620,7 @@ int eeprom_program(int argc,char **argv)
   if (argc==3) parameters_show=1;
 
   struct radio_parameters radio_parameters;
-  
+
   char *configuration_directives_input=argv[3];
   char *regulatory_information_input=argv[4];
   char *country_list=argv[11];
@@ -651,7 +652,7 @@ int eeprom_program(int argc,char **argv)
     int count=get_radio_reply(fd,buffer,1024,0);
     if (memmem(buffer,count,"EPRADDR=$0",10)) {
       if (!silent_mode) fprintf(stderr,"Radio is ready.\n");
-    } else {     
+    } else {
       fprintf(stderr,"RFD900+ undetected.\n");
       exit(-1);
     }
@@ -681,8 +682,8 @@ int eeprom_program(int argc,char **argv)
 
     // Set actual radio parameters
     radio_parameters.frequency=atoi(argv[5]);
-    radio_parameters.txpower=atoi(argv[6]?argv[6]:"0");  
-    radio_parameters.dutycycle=atoi(argv[7]?argv[7]:"0");  
+    radio_parameters.txpower=atoi(argv[6]?argv[6]:"0");
+    radio_parameters.dutycycle=atoi(argv[7]?argv[7]:"0");
     radio_parameters.airspeed=atoi(argv[8]?argv[8]:"0");
     radio_parameters.primary_country[0]=argv[9][0];
     radio_parameters.primary_country[1]=argv[9][1];
@@ -711,7 +712,7 @@ int eeprom_program(int argc,char **argv)
       strcpy(configuration_directives_normalised,
 	     configuration_directives);
     }
-    
+
     if (eeprom_build_image(configuration_directives_normalised,
 			   regulatory_information,
 			   radio_parameters,
@@ -727,7 +728,7 @@ int eeprom_program(int argc,char **argv)
     debug++; dump_bytes("EEPROM contents",readblock,2048); debug--;
     return 0;
   }
-  
+
   if (directive_list) {
     read_eeprom_directives(fd,readblock);
     eeprom_decode_data(readblock,DIRECTIVES_ONLY);
@@ -736,7 +737,7 @@ int eeprom_program(int argc,char **argv)
       printf("%s=%s\n",directives[i].key,directives[i].value);
     return 0;
   }
-  
+
   if (directive_get) {
     read_eeprom_directives(fd,readblock);
     eeprom_decode_data(readblock,DIRECTIVES_ONLY);
@@ -758,7 +759,7 @@ int eeprom_program(int argc,char **argv)
       fprintf(stderr,"Could not build datablock to write to EEPROM.\n");
       exit(-1);
     }
-    write_entire_eeprom(fd,datablock,readblock);    
+    write_entire_eeprom(fd,datablock,readblock);
   }
 
   if (directive_set) {
@@ -774,10 +775,10 @@ int eeprom_program(int argc,char **argv)
       fprintf(stderr,"Could not build datablock to write to EEPROM.\n");
       exit(-1);
     }
-    write_entire_eeprom(fd,datablock,readblock);    
+    write_entire_eeprom(fd,datablock,readblock);
   }
-  
-  
+
+
   if (parameters_set) {
 
     // Read current contents
@@ -786,7 +787,7 @@ int eeprom_program(int argc,char **argv)
     // Write new contents, using read data to suppress unnecessary writes
     write_entire_eeprom(fd,datablock,readblock);
   }
-  
+
   // Verify it
   unsigned char verifyblock[2048];
   read_entire_eeprom(fd,verifyblock);
@@ -797,7 +798,7 @@ int eeprom_program(int argc,char **argv)
       if (verifyblock[address]!=datablock[address]) problems++;
     }
   }
-  
+
   if (problems) {
     fprintf(stderr,
 	    "ERROR: %d bytes could not be correctly written.\n"
@@ -814,9 +815,9 @@ int eeprom_program(int argc,char **argv)
     eeprom_display_data("Datablock read from EEPROM");
   }
 
-  
-    
-  return 0;      
+
+
+  return 0;
 }
 
 int eeprom_write_page(int fd, int address,unsigned char *datablock)
@@ -832,7 +833,7 @@ int eeprom_write_page(int fd, int address,unsigned char *datablock)
       snprintf(cmd,1024,"!C%x!g",address);
       write_radio(fd,(unsigned char *)cmd,strlen(cmd));
       usleep(15000);
-      
+
       int a,o;
       r=read(fd,reply,8192); reply[8192]=0;
       // debug++; dump_bytes(cmd,reply,r); debug--;
@@ -852,7 +853,7 @@ int eeprom_write_page(int fd, int address,unsigned char *datablock)
 	problems++;
       }
     }
-  
+
   // Now write data bytes, escaping ! as !.
   for(int j=0;j<0x10;j++) {
     if (datablock[address+j]=='!') write_radio(fd,(unsigned char *)"!.",2);
@@ -867,12 +868,12 @@ int eeprom_write_page(int fd, int address,unsigned char *datablock)
 
   // Allow more time since we have slowed down I2C
   usleep(100000);
-  
+
   //  snprintf(cmd,1024,"%x!g!E",address);
   //  write_radio(fd,(unsigned char *)cmd,strlen(cmd));
   //  usleep(50000);
   // Check for "EEPROM WRITTEN $%x -> $%x" or "WRITE ERROR" messages
-  
+
   // clear out any queued data first
   r=read(fd,reply,8192); reply[8192]=0;
   char expected[1024];
@@ -904,7 +905,7 @@ int eeprom_write_page(int fd, int address,unsigned char *datablock)
     debug++; dump_bytes("This is what I saw",reply,r); debug--;
     debug++; dump_bytes("I expected to see",
 			(unsigned char *)expected,strlen(expected)); debug--;
-    
+
     problems++;
   }
 

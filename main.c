@@ -661,12 +661,15 @@ int main(int argc,char **argv)
 	if ((!different)&&(!force)) {
 	  printf("Flash ROM matched via checksum: nothing to do.\n");
 	  // ... except to make sure that the modem is set back to default speed
-	  if (exit_speed<=0)
+	  if (exit_speed<=0){
 	    // switch radio speed and reboot
 	    change_radio_to(fd,230400);
-	  else
+    }
+    else {
       reset_speed_and_exit(fd,0);
-	}
+    }
+    exit(0);
+  }
 	if (different) force=1;
       }
 
